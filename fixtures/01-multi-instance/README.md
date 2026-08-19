@@ -1,0 +1,127 @@
+# 01-multi-instance
+
+Runnable root fixture that wires single-instance siblings plus a multi-instance nested module.
+
+## Exercises
+
+- §4.1 `var` passed straight into a module input — `var.identity_byte_length` → `module.basic_identity.byte_length`; `var.content_body` → `module.basic_content.content_body`; `var.multi_instances` → `module.multi_instance.instances`
+- §4.1 `var` → `local` → module input — `var.project_name`/`var.environment` → `local.name_prefix` → nested module `name_prefix` inputs
+- §4.1 String concatenation / `join()` — `local.name_prefix = join(var.name_separator, ...)`
+- §4.1 Complex typed variables: `map(object({}))` — `var.multi_instances` / `module.multi_instance.var.instances`
+- §4.1 `optional()` attributes with and without defaults — instance object fields on `multi_instances`
+- §4.1 Type coercion (number → string) — `tostring(module.multi_instance.instance_count)` in `local.bundle_trigger`
+- §4.1 A local consumed by both a resource and a nested module — `local.name_prefix` → modules and `local_file.root_summary`
+- §4.2 `count = var.enabled ? 1 : 0` on a **resource** — `null_resource.bundle_marker`
+- §4.2 `try()` with defaults — `try(null_resource.bundle_marker[0].id, null)` output
+- §4.2 `coalesce()` / `try()` inside child — `modules/multi_instance` instance config resolution
+- §4.3 `for_each` on a resource over a `map(object)` — `random_id.x` / `random_pet.x` / `local_file.x` in `multi_instance`
+- §4.3 The "list of names"/map-of-config pattern driving `for_each` inside a child module — root `multi_instances` → child `instances`
+- §4.4 Root → child (single level) — all three nested modules
+- §4.4 Sibling modules where module A's output is module B's input — `basic_identity` → `basic_content`
+- §4.5 `for` expression producing a map — `local.instance_configs`, module outputs
+- §4.5 `merge()` — labels in root and children
+- §4.6 Output referencing a resource attribute — `summary_path` → `local_file.root_summary.filename`
+- §4.6 Output referencing a module output — identity/content/multi outputs
+- §4.6 Output aggregating across a `for_each` module — `multi_instances` / `multi_identity_ids`
+
+## Expected nodes
+
+- `module.basic_identity`
+- `module.basic_identity.random_id.this`
+- `module.basic_identity.random_pet.this`
+- `module.basic_identity.random_string.suffix`
+- `module.basic_content`
+- `module.basic_content.local_file.content`
+- `module.basic_content.local_file.metadata`
+- `module.multi_instance`
+- `module.multi_instance.random_id.x["alpha"]`
+- `module.multi_instance.random_id.x["bravo"]`
+- `module.multi_instance.random_id.x["charlie"]`
+- `module.multi_instance.random_pet.x["alpha"]`
+- `module.multi_instance.random_pet.x["bravo"]`
+- `module.multi_instance.random_pet.x["charlie"]`
+- `module.multi_instance.local_file.x["alpha"]`
+- `module.multi_instance.local_file.x["bravo"]`
+- `module.multi_instance.local_file.x["charlie"]`
+- `null_resource.bundle_marker[0]`
+- `local_file.root_summary`
+- `var.project_name`
+- `var.environment`
+- `var.name_separator`
+- `var.identity_byte_length`
+- `var.content_body`
+- `var.output_directory`
+- `var.enable_bundle_marker`
+- `var.multi_instances`
+- `local.name_prefix`
+- `local.common_labels`
+- `local.content_filename`
+- `local.metadata_filename`
+- `local.multi_output_dir`
+- `local.bundle_trigger`
+
+## Expected edges
+
+- `var.project_name` -> `local.name_prefix` (data)
+- `var.environment` -> `local.name_prefix` (data)
+- `var.name_separator` -> `local.name_prefix` (data)
+- `var.project_name` -> `local.common_labels` (data)
+- `var.environment` -> `local.common_labels` (data)
+- `var.output_directory` -> `local.content_filename` (data)
+- `var.output_directory` -> `local.metadata_filename` (data)
+- `var.output_directory` -> `local.multi_output_dir` (data)
+- `local.name_prefix` -> `local.content_filename` (data)
+- `local.name_prefix` -> `local.metadata_filename` (data)
+- `local.name_prefix` -> `local.multi_output_dir` (data)
+- `local.name_prefix` -> `module.basic_identity` (module input: name_prefix)
+- `var.identity_byte_length` -> `module.basic_identity` (module input: byte_length)
+- `local.common_labels` -> `module.basic_identity` (module input: labels)
+- `local.name_prefix` -> `module.basic_content` (module input: name_prefix)
+- `module.basic_identity.identity_id` -> `module.basic_content` (module input: identity_id)
+- `module.basic_identity.pet_name` -> `module.basic_content` (module input: identity_name)
+- `var.content_body` -> `module.basic_content` (module input: content_body)
+- `local.content_filename` -> `module.basic_content` (module input: content_filename)
+- `local.metadata_filename` -> `module.basic_content` (module input: metadata_filename)
+- `local.common_labels` -> `module.basic_content` (module input: labels)
+- `local.name_prefix` -> `module.multi_instance` (module input: name_prefix)
+- `var.multi_instances` -> `module.multi_instance` (module input: instances)
+- `local.multi_output_dir` -> `module.multi_instance` (module input: output_directory)
+- `local.common_labels` -> `module.multi_instance` (module input: labels)
+- `module.basic_identity.identity_id` -> `local.bundle_trigger` (data)
+- `module.basic_identity.pet_name` -> `local.bundle_trigger` (data)
+- `module.basic_content.content_sha1` -> `local.bundle_trigger` (data)
+- `module.multi_instance.instance_count` -> `local.bundle_trigger` (data)
+- `var.enable_bundle_marker` -> `null_resource.bundle_marker` (count)
+- `local.bundle_trigger` -> `null_resource.bundle_marker` (triggers)
+- `local.name_prefix` -> `local_file.root_summary` (data)
+- `var.output_directory` -> `local_file.root_summary` (data)
+- `module.basic_identity.identity_id` -> `local_file.root_summary` (data)
+- `module.basic_identity.pet_name` -> `local_file.root_summary` (data)
+- `module.basic_content.content_path` -> `local_file.root_summary` (data)
+- `module.basic_content.content_sha1` -> `local_file.root_summary` (data)
+- `module.multi_instance.instance_count` -> `local_file.root_summary` (data)
+- `module.multi_instance.instance_keys` -> `local_file.root_summary` (data)
+- `module.multi_instance.identity_ids` -> `local_file.root_summary` (data)
+- `local.common_labels` -> `local_file.root_summary` (data)
+- `var.enable_bundle_marker` -> `local_file.root_summary` (data)
+- `module.basic_identity` -> `module.basic_identity.random_id.this` (contains)
+- `module.basic_identity` -> `module.basic_identity.random_pet.this` (contains)
+- `module.basic_identity` -> `module.basic_identity.random_string.suffix` (contains)
+- `module.basic_content` -> `module.basic_content.local_file.content` (contains)
+- `module.basic_content` -> `module.basic_content.local_file.metadata` (contains)
+- `module.basic_content.local_file.content` -> `module.basic_content.local_file.metadata` (data)
+- `module.multi_instance` -> `module.multi_instance.random_id.x["alpha"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.random_id.x["bravo"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.random_id.x["charlie"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.random_pet.x["alpha"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.random_pet.x["bravo"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.random_pet.x["charlie"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.local_file.x["alpha"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.local_file.x["bravo"]` (contains)
+- `module.multi_instance` -> `module.multi_instance.local_file.x["charlie"]` (contains)
+- `module.multi_instance.random_id.x["alpha"]` -> `module.multi_instance.local_file.x["alpha"]` (data)
+- `module.multi_instance.random_pet.x["alpha"]` -> `module.multi_instance.local_file.x["alpha"]` (data)
+- `module.multi_instance.random_id.x["bravo"]` -> `module.multi_instance.local_file.x["bravo"]` (data)
+- `module.multi_instance.random_pet.x["bravo"]` -> `module.multi_instance.local_file.x["bravo"]` (data)
+- `module.multi_instance.random_id.x["charlie"]` -> `module.multi_instance.local_file.x["charlie"]` (data)
+- `module.multi_instance.random_pet.x["charlie"]` -> `module.multi_instance.local_file.x["charlie"]` (data)
