@@ -31,6 +31,114 @@ Operator protocol for agents: see [AGENTS.md](AGENTS.md).
 
 No credentials. No network side effects at plan/apply. No `backend` / `cloud` blocks. State stays local.
 
+## Consuming modules from another root
+
+Point `source` at a **git** URL plus a **subdirectory** (`//modules/...`). Do not use the GitHub web `/tree/...` URL.
+
+Pin with `?ref=<branch|tag|sha>`. Prefer a commit SHA once you care about reproducibility.
+
+### `basic_identity`
+
+```hcl
+module "basic_identity" {
+  source = "git::https://github.com/JerryBalmer1/Terraform.External.Test.git//modules/basic_identity?ref=main"
+
+  name_prefix = "demo"
+  byte_length = 4
+  pet_length  = 2
+  string_length = 6
+  labels = {
+    env = "dev"
+  }
+}
+
+output "identity_id" {
+  value = module.basic_identity.identity_id
+}
+
+output "pet_name" {
+  value = module.basic_identity.pet_name
+}
+```
+
+### `basic_content`
+
+Usually fed by `basic_identity` outputs (sibling wiring). Paths are caller-owned.
+
+```hcl
+module "basic_content" {
+  source = "git::https://github.com/JerryBalmer1/Terraform.External.Test.git//modules/basic_content?ref=main"
+
+  name_prefix       = "demo"
+  identity_id       = module.basic_identity.identity_id
+  identity_name     = module.basic_identity.pet_name
+  content_body      = "hello from basic_content"
+  content_filename  = "${path.module}/generated/demo.content.txt"
+  metadata_filename = "${path.module}/generated/demo.metadata.json"
+  labels = {
+    env = "dev"
+  }
+}
+
+output "content_path" {
+  value = module.basic_content.content_path
+}
+
+output "content_sha1" {
+  value = module.basic_content.content_sha1
+}
+```
+
+### `multi_instance`
+
+Creates one instance of X per map key via resource `for_each`.
+
+```hcl
+module "multi_instance" {
+  source = "git::https://github.com/JerryBalmer1/Terraform.External.Test.git//modules/multi_instance?ref=main"
+
+  name_prefix      = "demo"
+  output_directory = "${path.module}/generated/multi"
+  instances = {
+    alpha = { label = "alpha", pet_length = 2, byte_length = 4 }
+    bravo = { label = "bravo" }
+    charlie = { label = "charlie", byte_length = 8 }
+  }
+  labels = {
+    env = "dev"
+  }
+}
+
+output "multi_keys" {
+  value = module.multi_instance.instance_keys
+}
+
+output "multi_identities" {
+  value = module.multi_instance.identity_ids
+}
+```
+
+### Local clone (in-repo fixtures)
+
+Inside this repository, fixtures use relative paths instead of git:
+
+```hcl
+source = "../../modules/basic_identity"
+source = "../../modules/basic_content"
+source = "../../modules/multi_instance"
+```
+
+### Init
+
+From your consumer root:
+
+```powershell
+terraform init
+terraform plan
+```
+
+Private clones need normal git auth (SSH key or HTTPS credential/PAT). Terraform stores the checkout under `.terraform/modules/`.
+
 ## Fixture: 01-multi-instance
 
 Primary scenario for multi-instance coverage.
