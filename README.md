@@ -167,3 +167,7 @@ Do **not** use raw `terraform init` / `apply` / `destroy` for lifecycle proof. R
 Covered in `01-multi-instance` (non-exhaustive): var→module, var→local→module, `map(object)` + `optional()`, resource `count`, resource `for_each` over map, sibling modules, `for` map expressions, `merge`/`join`/`try`/`coalesce`/`tostring`, module and resource outputs including multi-instance maps.
 
 Not yet covered (see analysis gaps): module `count`/`for_each`, grandchild nesting, `dynamic`, sensitive outputs, `moved`, lifecycle pre/postconditions, provider aliases, and other §4 rows listed in the analysis artifact.
+
+## Development
+
+Run `git config core.hooksPath .githooks` after cloning to enable the commit-msg hook.
